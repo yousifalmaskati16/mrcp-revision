@@ -1,0 +1,453 @@
+<title>MRCP Revision</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MRCP">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#f4f7fc; --surface:#ffffff; --surface-2:#f0f5fd;
+    --ink:#0e1b30; --ink-2:#57657f; --ink-3:#8695ad;
+    --line:#e4ebf5; --line-2:#d6e0f0;
+    --blue:#2f6fed; --blue-600:#2258cc; --blue-050:#eaf1ff; --blue-100:#d9e6ff;
+    --good:#0fb37f; --good-050:#e6f8f1;
+    --warn:#f5a524; --warn-050:#fdf3e2;
+    --weak:#ef4d6a; --weak-050:#fdeaee;
+    --shadow:0 1px 2px rgba(16,40,80,.04),0 8px 24px rgba(16,40,80,.06);
+    --shadow-lg:0 12px 40px rgba(16,40,80,.14);
+    --r:18px; --r-sm:12px;
+  }
+  html{color-scheme:light}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{padding:env(safe-area-inset-top) 0 calc(78px + env(safe-area-inset-bottom))}
+  .wrap{max-width:560px;margin:0 auto;padding:8px 18px 24px}
+  h1{font-size:26px;letter-spacing:-.02em;margin:6px 0 2px;font-weight:700}
+  h2{font-size:12.5px;margin:26px 0 12px;color:var(--ink-3);
+    text-transform:uppercase;letter-spacing:.09em;font-weight:700}
+  .muted{color:var(--ink-2)}
+  .dim{color:var(--ink-3)}
+  .card{background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r);padding:18px;margin:12px 0;box-shadow:var(--shadow)}
+  .row{display:flex;gap:12px;align-items:center}
+  .between{justify-content:space-between}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+    padding:16px;box-shadow:var(--shadow)}
+  .stat b{display:block;font-size:30px;line-height:1.1;letter-spacing:-.02em}
+  .stat span{color:var(--ink-3);font-size:11.5px;text-transform:uppercase;
+    letter-spacing:.07em;font-weight:600;margin-top:4px;display:block}
+  .btn{appearance:none;border:1px solid var(--line-2);background:var(--surface);
+    color:var(--ink);padding:13px 16px;border-radius:14px;font-size:15px;
+    font-weight:600;cursor:pointer;flex:1;transition:transform .08s,background .15s}
+  .btn:active{transform:scale(.975)}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;
+    box-shadow:0 6px 16px rgba(47,111,237,.28)}
+  .btn.good{background:var(--good);border-color:var(--good);color:#fff}
+  .btn.warn{background:var(--warn);border-color:var(--warn);color:#3a2600}
+  .btn.ghost{background:var(--surface-2);border-color:transparent}
+  .btn.weak{background:var(--weak);border-color:var(--weak);color:#fff}
+  .pill{font-size:11px;padding:4px 11px;border-radius:999px;font-weight:600;
+    background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line);white-space:nowrap}
+  .pill.blue{background:var(--blue-050);color:var(--blue);border-color:transparent}
+  .pill.good{background:var(--good-050);color:var(--good);border-color:transparent}
+  .pill.weak{background:var(--weak-050);color:var(--weak);border-color:transparent}
+  .bar{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+  .bar>i{display:block;height:100%;background:var(--blue);border-radius:999px;
+    transition:width .5s cubic-bezier(.2,.7,.2,1)}
+  nav{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--surface) 88%,transparent);
+    backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);
+    border-top:1px solid var(--line);display:flex;
+    padding-bottom:env(safe-area-inset-bottom);z-index:20}
+  nav button{flex:1;background:none;border:0;color:var(--ink-3);padding:11px 4px 9px;
+    font-size:10.5px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;
+    align-items:center;gap:4px;transition:color .15s}
+  nav button.on{color:var(--blue)}
+  nav svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;
+    stroke-linecap:round;stroke-linejoin:round}
+  /* ring */
+  .ring{position:relative;width:132px;height:132px;flex:none}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .cx{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center}
+  .ring .cx b{font-size:32px;letter-spacing:-.03em;line-height:1}
+  .ring .cx span{font-size:11px;color:var(--ink-3);text-transform:uppercase;
+    letter-spacing:.07em;font-weight:600;margin-top:3px}
+  /* goal items */
+  .goal{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+  .goal:first-child{border-top:0}
+  .gi{width:38px;height:38px;border-radius:11px;flex:none;display:flex;
+    align-items:center;justify-content:center}
+  .gi svg{width:20px;height:20px;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .goal .txt{flex:1}
+  .goal .txt b{font-size:15px}
+  .goal .txt div{font-size:13px;color:var(--ink-2)}
+  .goal.done .txt b{color:var(--ink-3);text-decoration:line-through}
+  /* flashcard */
+  .flash{min-height:230px;display:flex;flex-direction:column;justify-content:center;
+    padding:28px 22px;cursor:pointer;position:relative;overflow:hidden}
+  .flash .q{font-size:20px;font-weight:600;letter-spacing:-.01em}
+  .flash .a{margin-top:18px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:17px;color:var(--ink)}
+  .flash .a b{color:var(--blue)}
+  .tap{color:var(--ink-3);font-size:13px;margin-top:18px;text-align:center}
+  .chk{display:flex;align-items:flex-start;gap:13px;padding:13px 0;border-top:1px solid var(--line)}
+  .chk:first-of-type{border-top:0}
+  .box{width:26px;height:26px;border-radius:8px;border:2px solid var(--line-2);
+    flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:all .15s;background:var(--surface)}
+  .box.on{background:var(--good);border-color:var(--good)}
+  .box.on::after{content:"";width:7px;height:12px;border:solid #fff;border-width:0 2.5px 2.5px 0;
+    transform:rotate(45deg);margin-top:-2px}
+  .conf{display:flex;gap:5px;margin-top:8px}
+  .conf i{flex:1;height:6px;border-radius:3px;background:var(--surface-2);cursor:pointer;transition:background .15s}
+  .conf i.on{background:var(--warn)}
+  .note{white-space:pre-wrap;font-size:15.5px;line-height:1.7}
+  .note b{color:var(--blue);font-weight:700}
+  .modtag{width:9px;height:9px;border-radius:3px;flex:none}
+  select{background:var(--surface);color:var(--ink);border:1px solid var(--line-2);
+    border-radius:12px;padding:11px 12px;font-size:15px;font-weight:600;width:100%;
+    -webkit-appearance:none;appearance:none;box-shadow:var(--shadow)}
+  a{color:var(--blue)}
+  .empty{text-align:center;color:var(--ink-3);padding:40px 20px;line-height:1.6}
+  .flag{background:var(--warn-050);border:1px solid transparent;border-radius:var(--r-sm);
+    padding:12px 14px;margin:10px 0;font-size:13.5px;color:var(--ink)}
+  .flag b{color:var(--warn)}
+  /* splash */
+  #splash{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#2f6fed,#1e50c0);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:#fff;transition:opacity .5s,visibility .5s}
+  #splash.gone{opacity:0;visibility:hidden}
+  #splash .logo{width:76px;height:76px;border-radius:22px;background:rgba(255,255,255,.16);
+    display:flex;align-items:center;justify-content:center;margin-bottom:22px;
+    box-shadow:0 20px 50px rgba(0,0,0,.25);backdrop-filter:blur(4px)}
+  #splash .logo svg{width:42px;height:42px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  #splash h1{font-size:30px;margin:0;letter-spacing:-.02em}
+  #splash p{margin:8px 0 0;opacity:.9;font-size:15px}
+  #splash .cd{margin-top:30px;font-size:13px;opacity:.85;letter-spacing:.04em}
+  #splash .cd b{font-size:44px;display:block;letter-spacing:-.03em;opacity:1;margin-bottom:2px}
+  .fade{animation:fade .35s ease both}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+
+<div id="splash">
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M8 3v4a4 4 0 0 0 8 0V3"/><path d="M12 15v2a5 5 0 0 0 10 0v-2"/><circle cx="22" cy="11" r="2"/><path d="M8 15a4 4 0 0 1-4-4"/></svg></div>
+  <h1>MRCP Revision</h1>
+  <p>Everything you noted, revised in time.</p>
+  <div class="cd"><b id="splashDays">–</b>days to 23 Sep</div>
+</div>
+
+<div class="wrap fade" id="view"></div>
+<nav id="nav"></nav>
+
+<script>
+/* ===== CONTENT (injected at build) ===== */
+const MODULES = /*__CONTENT__*/[];
+const EXAM_DATE = "2026-09-23";
+const BUFFER_DAYS = 10;   // finish first-pass this many days before exam
+
+/* ===== STATE ===== */
+const LS="mrcp_v2";
+let S=load();
+function load(){try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){return{}}}
+function save(){localStorage.setItem(LS,JSON.stringify(S))}
+S.cards=S.cards||{}; S.topics=S.topics||{}; S.days=S.days||{};
+if(!S.planStart){S.planStart=todayStr();save();}
+
+const DAY=86400000, now=()=>Date.now();
+function todayStr(d=new Date()){return d.toISOString().slice(0,10)}
+function daysToExam(){return Math.max(0,Math.ceil((new Date(EXAM_DATE)-new Date())/DAY))}
+function cardState(id){return S.cards[id]||(S.cards[id]={ef:2.5,reps:0,int:0,due:0})}
+
+/* flat cards + weak flag */
+const ALLCARDS=[];
+MODULES.forEach(m=>(m.cards||[]).forEach((c,i)=>ALLCARDS.push({...c,id:m.id+"::"+i,mod:m,weak:!!c.weak})));
+const WEAKCARDS=ALLCARDS.filter(c=>c.weak);
+function dueCards(){return ALLCARDS.filter(c=>(cardState(c.id).due||0)<=now())}
+function isMastered(c){const s=cardState(c.id);return c.weak? s.reps>=4 : s.reps>=2}
+function moduleStarted(m){return (m.cards||[]).some((_,i)=>cardState(m.id+"::"+i).reps>0)}
+
+/* ===== SM-2 (weak cards capped tighter until mastered) ===== */
+function grade(id,q){
+  const c=ALLCARDS.find(x=>x.id===id), st=cardState(id);
+  if(q<3){st.reps=0;st.int=0;}
+  else{
+    st.ef=Math.max(1.3,st.ef+(0.1-(5-q)*(0.08+(5-q)*0.02)));
+    st.reps++;
+    if(st.reps===1)st.int=1; else if(st.reps===2)st.int=6; else st.int=Math.round(st.int*st.ef);
+    if(q===3)st.int=Math.max(1,Math.round(st.int*0.6));
+    if(c&&c.weak&&!isMastered(c))st.int=Math.min(st.int,4); // keep weak spots coming back
+  }
+  st.due=now()+Math.max(st.int,0)*DAY+(st.int===0?60000:0);
+  st.last=now(); save();
+}
+
+/* ===== GOAL OF THE DAY (live, self-rebalancing) ===== */
+function plan(){
+  const dLeft=daysToExam();
+  const learnDeadline=Math.max(1,dLeft-BUFFER_DAYS);
+  const unlearned=MODULES.filter(m=>(m.cards||[]).length && !moduleStarted(m));
+  const perDay=Math.max(1,Math.ceil(unlearned.length/learnDeadline));
+  const todayNew=unlearned.slice(0,perDay);
+  const due=dueCards();
+  const weakDue=due.filter(c=>c.weak);
+  // pace / behind
+  const started=MODULES.filter(m=>(m.cards||[]).length && moduleStarted(m)).length;
+  const totalMods=MODULES.filter(m=>(m.cards||[]).length).length;
+  const planTotal=Math.max(1,Math.round((new Date(EXAM_DATE)-new Date(S.planStart))/DAY)-BUFFER_DAYS);
+  const elapsed=Math.round((new Date()-new Date(S.planStart))/DAY);
+  const expected=Math.min(totalMods,Math.round(totalMods*Math.min(1,elapsed/planTotal)));
+  const behind=Math.max(0,expected-started);
+  return {dLeft,unlearned,todayNew,due,weakDue,perDay,started,totalMods,behind};
+}
+function todaysGoalItems(){
+  const p=plan(), items=[];
+  items.push({key:"weak",label:"Weak spots",sub:p.weakDue.length?`${p.weakDue.length} bolded card${p.weakDue.length>1?'s':''} to hammer`:"none due — nice",
+    done:p.weakDue.length===0,count:p.weakDue.length,color:"weak",
+    icon:'<path d="M12 2 3 7v6c0 5 3.8 8.5 9 9 5.2-.5 9-4 9-9V7z"/><path d="M9 12l2 2 4-4"/>'});
+  items.push({key:"review",label:"Clear due reviews",sub:p.due.length?`${p.due.length} card${p.due.length>1?'s':''} scheduled today`:"all caught up",
+    done:p.due.length===0,count:p.due.length,color:"blue",
+    icon:'<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/>'});
+  const newNeeded=p.todayNew.length && p.behind>=0;
+  items.push({key:"learn",label:p.todayNew.length?`Learn: ${p.todayNew.map(m=>m.title).join(", ")}`:"First pass complete",
+    sub:p.unlearned.length?`${p.unlearned.length} module${p.unlearned.length>1?'s':''} left to introduce`:"every module started",
+    done:p.todayNew.length===0,count:p.todayNew.length,color:"good",
+    icon:'<path d="M4 19V5a2 2 0 0 1 2-2h12v16"/><path d="M6 17h12v4H6a2 2 0 0 1 0-4z"/>'});
+  return {items,plan:p};
+}
+function goalPct(){const {items}=todaysGoalItems();return Math.round(items.filter(i=>i.done).length/items.length*100)}
+
+/* ===== ROUTER ===== */
+let TAB="today";
+const TABS=[
+  ["today","Today",'<path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/>'],
+  ["study","Study",'<path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 1 2-2h12"/>'],
+  ["topics","Topics",'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>'],
+  ["notes","Notes",'<path d="M7 3h8l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/>'],
+  ["stats","Progress",'<path d="M5 20V11M12 20V4M19 20v-7"/>'],
+];
+function go(t){TAB=t;render()}
+function render(){
+  document.getElementById("nav").innerHTML=TABS.map(([id,l,ic])=>
+    `<button class="${id===TAB?'on':''}" onclick="go('${id}')"><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("");
+  const v=document.getElementById("view"); v.classList.remove("fade");void v.offsetWidth;v.classList.add("fade");
+  ({today:renderToday,study:renderStudy,topics:renderTopics,notes:renderNotes,stats:renderStats}[TAB])();
+}
+
+const PAL=["#2f6fed","#0fb37f","#f5a524","#ef4d6a","#7c5cff","#12b0c4","#ff7a45","#e05fb0",
+  "#3aa0ff","#57c78a","#f0b429","#5c7cfa","#20c997","#e64980","#845ef7","#15aabf"];
+function modColor(m){return PAL[MODULES.indexOf(m)%PAL.length]}
+function ringSvg(pct,color,stroke=11){
+  const r=(132-stroke)/2,c=2*Math.PI*r;
+  return `<svg width="132" height="132" viewBox="0 0 132 132">
+    <circle cx="66" cy="66" r="${r}" fill="none" stroke="var(--surface-2)" stroke-width="${stroke}"/>
+    <circle cx="66" cy="66" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
+      stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-pct/100)}"/></svg>`;
+}
+
+/* ===== TODAY ===== */
+function renderToday(){
+  const {items,plan:p}=todaysGoalItems();
+  const gp=goalPct();
+  const v=document.getElementById("view");
+  const done=MODULES.filter(m=>(m.cards||[]).length&&moduleStarted(m)).length;
+  v.innerHTML=`
+    <div class="row between" style="margin-top:6px">
+      <div><h1>Today</h1><p class="muted" style="margin:0">${niceDate()}</p></div>
+      <span class="pill blue">${p.dLeft} days left</span>
+    </div>
+    <div class="card" style="display:flex;gap:18px;align-items:center">
+      <div class="ring">${ringSvg(gp,"var(--blue)")}
+        <div class="cx"><b>${gp}%</b><span>Goal</span></div></div>
+      <div style="flex:1">
+        <b style="font-size:16px">${gp===100?"Day complete 🎉":"Goal of the day"}</b>
+        <p class="muted" style="margin:6px 0 0;font-size:14px">
+          ${gp===100?"You've cleared everything for today.":"Finish these three to stay on track for 23 Sep."}</p>
+        ${p.behind>0?`<div class="pill weak" style="margin-top:10px;display:inline-block">${p.behind} module${p.behind>1?'s':''} behind pace</div>`
+          :`<div class="pill good" style="margin-top:10px;display:inline-block">On track</div>`}
+      </div>
+    </div>
+    <div class="card" style="padding:6px 18px">
+      ${items.map(it=>`
+        <div class="goal ${it.done?'done':''}">
+          <div class="gi" style="background:var(--${it.color}-050);color:var(--${it.color})">
+            <svg viewBox="0 0 24 24" stroke="currentColor">${it.icon}</svg></div>
+          <div class="txt"><b>${it.label}</b><div>${it.sub}</div></div>
+          ${it.done?`<span class="pill good">✓</span>`
+            :`<button class="btn ${it.color==='weak'?'weak':it.color==='blue'?'primary':'good'}"
+                style="flex:0 0 auto;padding:9px 15px" onclick="${it.key==='learn'?`learnModule('${(p.todayNew[0]||{}).id||''}')`:`startReview('${it.key}')`}">
+                ${it.key==='learn'?'Start':'Go'}</button>`}
+        </div>`).join("")}
+    </div>
+    <h2>Modules</h2>
+    ${MODULES.length?MODULES.map(m=>{
+      const cards=(m.cards||[]).length;
+      const modDue=ALLCARDS.filter(c=>c.mod===m&&(cardState(c.id).due||0)<=now()).length;
+      const started=moduleStarted(m);
+      const weak=(m.cards||[]).filter(c=>c.weak).length;
+      return `<div class="card row between" style="cursor:pointer;padding:15px 18px" onclick="openModule('${m.id}')">
+        <div class="row"><span class="modtag" style="background:${modColor(m)}"></span>
+          <div><b>${m.title}</b><div class="dim" style="font-size:13px">${cards} cards${weak?` · <span style="color:var(--weak)">${weak} weak</span>`:''} · ${(m.topics||[]).length} topics</div></div></div>
+        ${!started?`<span class="pill">New</span>`:modDue?`<span class="pill blue">${modDue} due</span>`:`<span class="pill good">✓</span>`}
+      </div>`}).join("")
+      :`<div class="card empty">No modules yet.<br>Add PDFs to the <b>inbox/</b> folder — your notes appear here after processing.</div>`}
+  `;
+  requestAnimationFrame(()=>document.querySelectorAll('.ring circle:last-child').forEach(c=>c.style.transition='stroke-dashoffset .8s cubic-bezier(.2,.7,.2,1)'));
+}
+
+/* ===== STUDY / REVIEW ===== */
+let SESSION=null,SIDX=0,SHOWA=false,SNAME="";
+function startReview(kind){
+  let pool;
+  if(kind==="weak")pool=dueCards().filter(c=>c.weak),SNAME="Weak spots";
+  else if(kind==="review")pool=dueCards(),SNAME="Due review";
+  else pool=dueCards(),SNAME="Review";
+  if(!pool.length){toast("Nothing due there right now.");return}
+  // weak first, then by due time
+  pool.sort((a,b)=>(b.weak-a.weak)||((cardState(a.id).due||0)-(cardState(b.id).due||0)));
+  SESSION=pool;SIDX=0;SHOWA=false;TAB="study";render();
+}
+function learnModule(id){
+  const m=MODULES.find(x=>x.id===id);if(!m||!(m.cards||[]).length){toast("Nothing to learn.");return}
+  SESSION=ALLCARDS.filter(c=>c.mod.id===id);SNAME="Learn · "+m.title;SIDX=0;SHOWA=false;TAB="study";render();
+}
+function drillModule(id){
+  const m=MODULES.find(x=>x.id===id);const pool=ALLCARDS.filter(c=>c.mod.id===id);
+  if(!pool.length){toast("No cards.");return}
+  SESSION=shuffle(pool);SNAME=m.title;SIDX=0;SHOWA=false;TAB="study";render();
+}
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function renderStudy(){
+  const v=document.getElementById("view");
+  if(!SESSION){
+    if(!ALLCARDS.length){v.innerHTML=`<h1>Study</h1><div class="card empty">No flashcards yet.</div>`;return}
+    const due=dueCards(),weak=due.filter(c=>c.weak);
+    v.innerHTML=`<h1>Study</h1>
+      <div class="grid">
+        <button class="btn primary" onclick="startReview('review')">Due review · ${due.length}</button>
+        <button class="btn weak" onclick="startReview('weak')">Weak spots · ${weak.length}</button>
+      </div>
+      <h2>Drill a module</h2>
+      ${MODULES.map(m=>`<div class="card row between" style="cursor:pointer;padding:14px 18px" onclick="drillModule('${m.id}')">
+        <div class="row"><span class="modtag" style="background:${modColor(m)}"></span><b>${m.title}</b></div>
+        <span class="dim">${(m.cards||[]).length} cards ›</span></div>`).join("")}`;
+    return;
+  }
+  if(SIDX>=SESSION.length){
+    const n=SESSION.length;SESSION=null;
+    v.innerHTML=`<div class="card empty" style="font-size:19px;padding:50px 20px">
+      <div style="font-size:44px;margin-bottom:10px">✅</div>Session complete
+      <div class="dim" style="margin-top:6px">${n} card${n>1?'s':''} reviewed</div></div>
+      <button class="btn primary" style="width:100%" onclick="go('today')">Back to today</button>`;
+    return;
+  }
+  const c=SESSION[SIDX];
+  v.innerHTML=`
+    <div class="row between" style="margin-top:6px">
+      <div class="row" style="gap:8px"><span class="pill">${SNAME}</span>
+        ${c.weak?`<span class="pill weak">weak spot</span>`:''}</div>
+      <span class="dim" style="font-size:13px">${SIDX+1} / ${SESSION.length}</span></div>
+    <div class="card flash" onclick="revealA()" style="border-color:${c.weak?'var(--weak)':'var(--line)'}">
+      <div class="dim" style="font-size:12px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">${c.mod.title}</div>
+      <div class="q">${md(c.q)}</div>
+      ${SHOWA?`<div class="a">${md(c.a)}</div>`:`<div class="tap">Tap to reveal</div>`}
+    </div>
+    ${SHOWA?`<div class="row" style="gap:8px">
+      <button class="btn ghost" style="color:var(--weak)" onclick="ans(0)">Again</button>
+      <button class="btn ghost" style="color:var(--warn)" onclick="ans(3)">Hard</button>
+      <button class="btn ghost" style="color:var(--good)" onclick="ans(4)">Good</button>
+      <button class="btn primary" onclick="ans(5)">Easy</button>
+    </div><p class="dim" style="text-align:center;font-size:12px;margin-top:12px">
+      ${c.weak&&!isMastered(c)?'Weak spots repeat until mastered (4 correct).':'Rate honestly — it schedules the next review.'}</p>`:''}`;
+}
+function revealA(){SHOWA=true;render()}
+function ans(q){grade(SESSION[SIDX].id,q);SIDX++;SHOWA=false;render()}
+
+/* ===== module detail (from Today) ===== */
+function openModule(id){drillModule(id)}
+
+/* ===== TOPICS ===== */
+function renderTopics(){
+  const v=document.getElementById("view");
+  if(!MODULES.length){v.innerHTML=`<h1>Topics</h1><div class="card empty">No topics yet.</div>`;return}
+  v.innerHTML=`<h1>Topic checklist</h1><p class="muted" style="margin-top:0">Tick what you've revised; set a confidence.</p>`+
+  MODULES.map(m=>{
+    const ts=m.topics||[];const done=ts.filter((_,i)=>S.topics[m.id+"::"+i]?.done).length;
+    return `<div class="card">
+      <div class="row between"><b><span class="modtag" style="background:${modColor(m)};display:inline-block;margin-right:9px"></span>${m.title}</b>
+        <span class="pill ${done===ts.length&&ts.length?'good':''}">${done}/${ts.length}</span></div>
+      <div class="bar" style="margin:12px 0"><i style="width:${ts.length?done/ts.length*100:0}%;background:${modColor(m)}"></i></div>
+      ${ts.map((t,i)=>{const k=m.id+"::"+i,st=S.topics[k]||{};return `
+        <div class="chk"><div class="box ${st.done?'on':''}" onclick="tgTopic('${k}')"></div>
+          <div style="flex:1">${md(t)}
+            <div class="conf">${[1,2,3,4,5].map(n=>`<i class="${(st.conf||0)>=n?'on':''}" onclick="conf('${k}',${n})"></i>`).join("")}</div>
+          </div></div>`}).join("")}
+    </div>`}).join("");
+}
+function tgTopic(k){S.topics[k]=S.topics[k]||{};S.topics[k].done=!S.topics[k].done;save();render()}
+function conf(k,n){S.topics[k]=S.topics[k]||{};S.topics[k].conf=n;save();render()}
+
+/* ===== NOTES ===== */
+function renderNotes(){
+  const v=document.getElementById("view");
+  const ms=MODULES.filter(m=>m.summary||m.flags?.length);
+  if(!ms.length){v.innerHTML=`<h1>Notes</h1><div class="card empty">No summary notes yet.</div>`;return}
+  const cur=S.noteMod&&ms.find(m=>m.id===S.noteMod)?S.noteMod:ms[0].id;
+  const m=ms.find(x=>x.id===cur);
+  v.innerHTML=`<h1>Summary notes</h1>
+    <select onchange="S.noteMod=this.value;save();render()">${ms.map(x=>`<option value="${x.id}" ${x.id===cur?'selected':''}>${x.title}</option>`).join("")}</select>
+    ${m.flags&&m.flags.length?`<div class="flag"><b>⚠ Possible issues to check</b> — your notes are shown verbatim; these are flags only, nothing was changed:
+      <ul style="margin:8px 0 0;padding-left:18px">${m.flags.map(f=>`<li>${md(f)}</li>`).join("")}</ul></div>`:''}
+    <div class="card note">${m.summary?md(m.summary):'<span class="dim">No summary for this module.</span>'}</div>`;
+}
+
+/* ===== PROGRESS ===== */
+function renderStats(){
+  const v=document.getElementById("view");
+  const total=ALLCARDS.length;
+  const mastered=ALLCARDS.filter(isMastered).length;
+  const seen=ALLCARDS.filter(c=>cardState(c.id).reps>0).length;
+  const weakM=WEAKCARDS.filter(isMastered).length;
+  const topTotal=MODULES.reduce((n,m)=>n+(m.topics||[]).length,0);
+  const topDone=Object.values(S.topics).filter(t=>t.done).length;
+  v.innerHTML=`<h1>Progress</h1>
+    <div class="grid">
+      <div class="stat"><b>${daysToExam()}</b><span>Days to exam</span></div>
+      <div class="stat"><b style="color:var(--good)">${pct(mastered,total)}%</b><span>Cards mastered</span></div>
+      <div class="stat"><b style="color:var(--weak)">${weakM}/${WEAKCARDS.length}</b><span>Weak spots fixed</span></div>
+      <div class="stat"><b style="color:var(--warn)">${pct(topDone,topTotal)}%</b><span>Topics revised</span></div>
+    </div>
+    <h2>By module</h2>
+    ${MODULES.map(m=>{
+      const cs=(m.cards||[]);const mm=cs.filter((_,i)=>isMastered({id:m.id+"::"+i,weak:cs[i].weak})).length;
+      return `<div class="card" style="padding:15px 18px">
+        <div class="row between"><b><span class="modtag" style="background:${modColor(m)};display:inline-block;margin-right:9px"></span>${m.title}</b>
+          <span class="dim">${mm}/${cs.length}</span></div>
+        <div class="bar" style="margin-top:10px"><i style="width:${cs.length?mm/cs.length*100:0}%;background:${modColor(m)}"></i></div>
+      </div>`}).join("")}
+    <p class="dim" style="text-align:center;font-size:12px;margin-top:22px">
+      Saved on this device · Add to Home Screen to keep it handy</p>`;
+}
+function pct(a,b){return b?Math.round(a/b*100):0}
+
+/* ===== helpers ===== */
+function md(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+  .replace(/\*\*(.+?)\*\*/g,"<b>$1</b>")}
+function niceDate(){return new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}
+let TT;
+function toast(m){clearTimeout(TT);let e=document.getElementById('toast');
+  if(!e){e=document.createElement('div');e.id='toast';e.style.cssText='position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-size:14px;font-weight:600;z-index:50;box-shadow:var(--shadow-lg);max-width:80%;text-align:center';document.body.appendChild(e)}
+  e.textContent=m;e.style.opacity='1';TT=setTimeout(()=>e.style.opacity='0',1800)}
+
+/* ===== splash + boot ===== */
+document.getElementById('splashDays').textContent=daysToExam();
+render();
+setTimeout(()=>document.getElementById('splash').classList.add('gone'),1500);
+document.getElementById('splash').addEventListener('click',()=>document.getElementById('splash').classList.add('gone'));
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>

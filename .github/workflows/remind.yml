@@ -1,0 +1,33 @@
+name: Phone reminders
+on:
+  schedule:
+    # times are UTC. Bahrain = UTC+3.
+    - cron: "0 16 * * *"    # daily 19:00 Bahrain — study nudge
+    - cron: "0 7 * * 0"     # Sunday 10:00 Bahrain — weekly progress check
+    - cron: "5 16 * * *"    # daily — milestone check (self-skips unless 30/14/7/3/1 days out)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "daily | weekly | milestone"
+        default: "daily"
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Send reminder
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            case "${{ github.event.schedule }}" in
+              "0 16 * * *") MODE=daily ;;
+              "0 7 * * 0")  MODE=weekly ;;
+              "5 16 * * *") MODE=milestone ;;
+            esac
+          else
+            MODE="${{ github.event.inputs.mode }}"
+          fi
+          bash scripts/notify.sh "$MODE"
