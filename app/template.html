@@ -175,7 +175,7 @@ const LS="mrcp_v2";
 let S=load();
 function load(){try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){return{}}}
 function save(){localStorage.setItem(LS,JSON.stringify(S))}
-S.cards=S.cards||{}; S.topics=S.topics||{}; S.days=S.days||{};
+S.cards=S.cards||{}; S.topics=S.topics||{}; S.days=S.days||{}; S.nrev=S.nrev||{};
 if(!S.planStart){S.planStart=todayStr();save();}
 
 const DAY=86400000, now=()=>Date.now();
@@ -241,6 +241,54 @@ function todaysGoalItems(){
 }
 function goalPct(){const {items}=todaysGoalItems();return Math.round(items.filter(i=>i.done).length/items.length*100)}
 
+/* ===== NOTES REVIEW ENGINE (paced to finish before the exam; auto-recalcs on new PDFs) ===== */
+const ALLSECS=[];
+MODULES.forEach(m=>(m.notes||[]).forEach((s,i)=>ALLSECS.push({id:m.id+"##"+i,mod:m,h:s.h,body:s.body})));
+function secState(id){return S.nrev[id]||(S.nrev[id]={reviews:0,due:0})}
+function sameDay(ts){return !!ts&&todayStr(new Date(ts))===todayStr()}
+function reviewSec(id){const st=secState(id); if(!st.first)st.first=now(); st.reviews++; st.last=now();
+  const iv=[4,9,20,40][Math.min(st.reviews-1,3)]; st.due=now()+iv*DAY; save();}
+function notesToday(){
+  const secs=ALLSECS;
+  const firstPass=secs.filter(s=>secState(s.id).reviews===0);        // never covered
+  const reviewed=secs.filter(s=>secState(s.id).reviews>0);
+  const daysLeft=Math.max(1,daysToExam());
+  const perDay=firstPass.length?Math.ceil(firstPass.length/daysLeft):0; // to finish first pass by exam
+  const introducedToday=secs.filter(s=>sameDay(secState(s.id).first)).length;
+  const newLeftToday=Math.max(0,perDay-introducedToday);
+  const reDue=reviewed.filter(s=>{const st=secState(s.id);return (st.due||0)<=now()&&!sameDay(st.last)});
+  const queue=reDue.concat(firstPass.slice(0,newLeftToday));
+  const doneToday=secs.filter(s=>sameDay(secState(s.id).last)).length;
+  return {secs,firstPass,reviewed,perDay,queue,doneToday,daysLeft,covered:reviewed.length,total:secs.length};
+}
+function startNotesReview(){const nt=notesToday(); if(!nt.queue.length){toast("Notes all caught up today.");return;} NSESSION=nt.queue;NIDX=0;render();}
+function renderNotesReview(){
+  const v=document.getElementById("view");
+  if(NIDX>=NSESSION.length){
+    const n=NSESSION.length; NSESSION=null;
+    v.innerHTML=`<div class="card empty" style="padding:50px 20px;font-size:19px"><div style="font-size:44px;margin-bottom:10px">📖</div>Notes reviewed<div class="dim" style="margin-top:6px">${n} section${n>1?'s':''} done today</div></div>
+      <button class="btn primary" style="width:100%" onclick="go('today')">Back to today</button>`;
+    return;
+  }
+  const s=NSESSION[NIDX];
+  v.innerHTML=`
+    <div class="row between" style="margin-top:6px">
+      <span class="pill blue">Notes review</span>
+      <span class="dim" style="font-size:13px">${NIDX+1} / ${NSESSION.length}</span></div>
+    <div class="card">
+      <div class="dim" style="font-size:12px;text-transform:uppercase;letter-spacing:.07em">${esc(s.mod.title)}</div>
+      <div style="font-weight:700;font-size:19px;letter-spacing:-.01em;margin:4px 0 10px">${esc(s.h)}</div>
+      <div class="secbody">${renderNoteBody(s.body)}</div>
+    </div>
+    <div class="row" style="gap:8px">
+      <button class="btn ghost" onclick="skipNote()">Skip</button>
+      <button class="btn primary" onclick="doneNote()">Mark reviewed</button>
+    </div>`;
+  window.scrollTo(0,0);
+}
+function doneNote(){reviewSec(NSESSION[NIDX].id);NIDX++;render();}
+function skipNote(){NIDX++;render();}
+
 /* ===== ROUTER ===== */
 let TAB="today";
 const TABS=[
@@ -250,10 +298,11 @@ const TABS=[
   ["notes","Notes",'<path d="M7 3h8l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/>'],
   ["stats","Progress",'<path d="M5 20V11M12 20V4M19 20v-7"/>'],
 ];
-function go(t){TAB=t;render()}
+function go(t){NSESSION=null;TAB=t;render()}
 function render(){
   document.getElementById("nav").innerHTML=TABS.map(([id,l,ic])=>
     `<button class="${id===TAB?'on':''}" onclick="go('${id}')"><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("");
+  if(NSESSION){renderNotesReview();return;}
   const v=document.getElementById("view"); v.classList.remove("fade");void v.offsetWidth;v.classList.add("fade");
   ({today:renderToday,study:renderStudy,topics:renderTopics,notes:renderNotes,stats:renderStats}[TAB])();
 }
@@ -273,6 +322,7 @@ function ringSvg(pct,color,stroke=11){
 function renderToday(){
   const {items,plan:p}=todaysGoalItems();
   const gp=goalPct();
+  const nt=notesToday();
   const v=document.getElementById("view");
   const done=MODULES.filter(m=>(m.cards||[]).length&&moduleStarted(m)).length;
   v.innerHTML=`
@@ -303,6 +353,17 @@ function renderToday(){
                 ${it.key==='learn'?'Start':'Go'}</button>`}
         </div>`).join("")}
     </div>
+    ${nt.total?`<h2>Notes to review today</h2>
+    <div class="card" style="padding:16px 18px">
+      <div class="row between">
+        <div style="flex:1">
+          <b style="font-size:16px">${nt.queue.length?`${nt.queue.length} section${nt.queue.length>1?'s':''} to read`:'All caught up 📖'}</b>
+          <div class="muted" style="font-size:13px;margin-top:3px">${nt.covered}/${nt.total} sections covered${nt.firstPass.length?` · ${nt.perDay}/day to finish by 23 Sep`:' · full pass complete'}</div>
+        </div>
+        ${nt.queue.length?`<button class="btn primary" style="flex:0 0 auto;padding:11px 18px" onclick="startNotesReview()">Review</button>`:`<span class="pill good">✓</span>`}
+      </div>
+      <div class="bar" style="margin-top:14px"><i style="width:${nt.total?Math.round(nt.covered/nt.total*100):0}%"></i></div>
+    </div>`:''}
     <h2>Modules</h2>
     ${MODULES.length?MODULES.map(m=>{
       const cards=(m.cards||[]).length;
@@ -320,7 +381,7 @@ function renderToday(){
 }
 
 /* ===== STUDY / REVIEW ===== */
-let SESSION=null,SIDX=0,SHOWA=false,SNAME="",NOTEQ="";
+let SESSION=null,SIDX=0,SHOWA=false,SNAME="",NOTEQ="",NSESSION=null,NIDX=0;
 function startReview(kind){
   let pool;
   if(kind==="weak")pool=dueCards().filter(c=>c.weak),SNAME="Weak spots";
@@ -487,12 +548,15 @@ function renderStats(){
   const weakM=WEAKCARDS.filter(isMastered).length;
   const topTotal=MODULES.reduce((n,m)=>n+(m.topics||[]).length,0);
   const topDone=Object.values(S.topics).filter(t=>t.done).length;
+  const nt=notesToday();
   v.innerHTML=`<h1>Progress</h1>
     <div class="grid">
       <div class="stat"><b>${daysToExam()}</b><span>Days to exam</span></div>
+      <div class="stat"><b style="color:var(--blue)">${pct(nt.covered,nt.total)}%</b><span>Notes covered</span></div>
       <div class="stat"><b style="color:var(--good)">${pct(mastered,total)}%</b><span>Cards mastered</span></div>
       <div class="stat"><b style="color:var(--weak)">${weakM}/${WEAKCARDS.length}</b><span>Weak spots fixed</span></div>
       <div class="stat"><b style="color:var(--warn)">${pct(topDone,topTotal)}%</b><span>Topics revised</span></div>
+      <div class="stat"><b>${nt.firstPass.length}</b><span>Sections left</span></div>
     </div>
     <h2>By module</h2>
     ${MODULES.map(m=>{
