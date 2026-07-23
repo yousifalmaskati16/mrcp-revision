@@ -176,6 +176,7 @@ let S=load();
 function load(){try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){return{}}}
 function save(){localStorage.setItem(LS,JSON.stringify(S))}
 S.cards=S.cards||{}; S.topics=S.topics||{}; S.days=S.days||{}; S.nrev=S.nrev||{};
+S.qbank=S.qbank||{total:5461,done:1093,log:{}}; S.qbank.log=S.qbank.log||{};
 if(!S.planStart){S.planStart=todayStr();save();}
 
 const DAY=86400000, now=()=>Date.now();
@@ -289,6 +290,34 @@ function renderNotesReview(){
 function doneNote(){reviewSec(NSESSION[NIDX].id);NIDX++;render();}
 function skipNote(){NIDX++;render();}
 
+/* ===== QUESTION BANK (external qbank pacer + daily log) ===== */
+function fmt(n){return (n||0).toLocaleString()}
+function qbankPlan(){
+  const q=S.qbank, total=q.total||0, done=Math.min(q.done||0,total);
+  const remaining=Math.max(0,total-done);
+  const daysLeft=Math.max(1,daysToExam());
+  const perDay=remaining?Math.ceil(remaining/daysLeft):0;
+  const solvedToday=q.log[todayStr()]||0;
+  return {total,done,remaining,perDay,solvedToday,daysLeft};
+}
+function logQuestions(){
+  const v=prompt("How many questions did you solve today?");
+  if(v===null)return; const n=parseInt(v,10);
+  if(isNaN(n)||n<0){toast("Enter a valid number.");return;}
+  const t=todayStr(); S.qbank.log[t]=(S.qbank.log[t]||0)+n;
+  S.qbank.done=Math.min((S.qbank.done||0)+n,S.qbank.total); save();
+  const p=qbankPlan();
+  toast(p.solvedToday>=p.perDay?"Today's target hit 🎯":`Logged ${n} · ${Math.max(0,p.perDay-p.solvedToday)} more today`);
+  render();
+}
+function editQbank(){
+  const tot=prompt("Total questions in your qbank:",S.qbank.total); if(tot===null)return;
+  const att=prompt("How many attempted so far?",S.qbank.done); if(att===null)return;
+  const t=parseInt(tot,10), a=parseInt(att,10);
+  if(isNaN(t)||isNaN(a)||t<0||a<0){toast("Enter valid numbers.");return;}
+  S.qbank.total=t; S.qbank.done=Math.min(a,t); save(); render();
+}
+
 /* ===== ROUTER ===== */
 let TAB="today";
 const TABS=[
@@ -323,6 +352,7 @@ function renderToday(){
   const {items,plan:p}=todaysGoalItems();
   const gp=goalPct();
   const nt=notesToday();
+  const qb=qbankPlan();
   const v=document.getElementById("view");
   const done=MODULES.filter(m=>(m.cards||[]).length&&moduleStarted(m)).length;
   v.innerHTML=`
@@ -352,6 +382,21 @@ function renderToday(){
                 style="flex:0 0 auto;padding:9px 15px" onclick="${it.key==='learn'?`learnModule('${(p.todayNew[0]||{}).id||''}')`:`startReview('${it.key}')`}">
                 ${it.key==='learn'?'Start':'Go'}</button>`}
         </div>`).join("")}
+    </div>
+    <h2>Question bank</h2>
+    <div class="card" style="padding:16px 18px">
+      <div class="row between">
+        <div style="flex:1">
+          <b style="font-size:16px">${qb.perDay?`${qb.perDay} questions today`:'Qbank complete 🎉'}</b>
+          <div class="muted" style="font-size:13px;margin-top:3px">${qb.solvedToday} solved today · ${fmt(qb.done)}/${fmt(qb.total)} attempted</div>
+        </div>
+        ${qb.perDay?`<button class="btn ${qb.solvedToday>=qb.perDay?'good':'primary'}" style="flex:0 0 auto;padding:11px 18px" onclick="logQuestions()">Log</button>`:`<span class="pill good">✓</span>`}
+      </div>
+      <div class="bar" style="margin-top:14px"><i style="width:${qb.total?Math.round(qb.done/qb.total*100):0}%"></i></div>
+      <div class="row between" style="margin-top:10px">
+        <span class="dim" style="font-size:12px">${qb.remaining?`${fmt(qb.remaining)} left · ${qb.perDay}/day to finish by 23 Sep`:'All questions attempted'}</span>
+        <span onclick="editQbank()" style="color:var(--blue);font-size:12px;cursor:pointer">Edit</span>
+      </div>
     </div>
     ${nt.total?`<h2>Notes to review today</h2>
     <div class="card" style="padding:16px 18px">
@@ -549,9 +594,11 @@ function renderStats(){
   const topTotal=MODULES.reduce((n,m)=>n+(m.topics||[]).length,0);
   const topDone=Object.values(S.topics).filter(t=>t.done).length;
   const nt=notesToday();
+  const qb=qbankPlan();
   v.innerHTML=`<h1>Progress</h1>
     <div class="grid">
       <div class="stat"><b>${daysToExam()}</b><span>Days to exam</span></div>
+      <div class="stat"><b style="color:var(--good)">${pct(qb.done,qb.total)}%</b><span>Qbank done</span></div>
       <div class="stat"><b style="color:var(--blue)">${pct(nt.covered,nt.total)}%</b><span>Notes covered</span></div>
       <div class="stat"><b style="color:var(--good)">${pct(mastered,total)}%</b><span>Cards mastered</span></div>
       <div class="stat"><b style="color:var(--weak)">${weakM}/${WEAKCARDS.length}</b><span>Weak spots fixed</span></div>
