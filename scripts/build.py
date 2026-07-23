@@ -31,6 +31,13 @@ for name in ("manifest.webmanifest", "icon-192.png", "icon-512.png"):
     if src.exists():
         shutil.copy2(src, DIST/name)
 
+# 4b. source PDFs referenced by modules -> dist/sources/ (for the in-app "PDF" button)
+srcdir = DIST/"sources"; srcdir.mkdir(exist_ok=True)
+for m in mods:
+    pdf = m.get("pdf")
+    if pdf and (ROOT/"inbox"/pdf).exists():
+        shutil.copy2(ROOT/"inbox"/pdf, srcdir/pdf)
+
 # 5. .nojekyll so GitHub Pages serves files verbatim
 (DIST/".nojekyll").write_text("")
 

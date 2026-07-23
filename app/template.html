@@ -117,6 +117,26 @@
   .flag{background:var(--warn-050);border:1px solid transparent;border-radius:var(--r-sm);
     padding:12px 14px;margin:10px 0;font-size:13.5px;color:var(--ink)}
   .flag b{color:var(--warn)}
+  /* notes reader */
+  .search{width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:12px;
+    font-size:15px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);-webkit-appearance:none}
+  .pdfbtn{flex:0 0 auto;text-decoration:none;display:flex;align-items:center;gap:6px;padding:12px 15px}
+  details.sec{border:1px solid var(--line);border-radius:var(--r-sm);margin:10px 0;
+    background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+  details.sec>summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:700;
+    font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  details.sec>summary::-webkit-details-marker{display:none}
+  details.sec>summary::after{content:"+";color:var(--ink-3);font-size:22px;font-weight:400;line-height:1}
+  details.sec[open]>summary::after{content:"\2013"}
+  .secbody{padding:2px 16px 15px;font-size:15px;line-height:1.68}
+  .secbody ul{margin:6px 0;padding-left:20px}
+  .secbody li{margin:4px 0}
+  .secbody p{margin:9px 0}
+  .secbody .hl{background:var(--weak-050);color:var(--weak);font-weight:700;padding:0 4px;border-radius:5px}
+  .secbody table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;display:block;overflow-x:auto}
+  .secbody th,.secbody td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  .secbody th{background:var(--surface-2);font-weight:700;white-space:nowrap}
+  mark{background:#ffe58a;color:#1a1400;border-radius:3px;padding:0 2px}
   /* splash */
   #splash{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#2f6fed,#1e50c0);
     display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -300,7 +320,7 @@ function renderToday(){
 }
 
 /* ===== STUDY / REVIEW ===== */
-let SESSION=null,SIDX=0,SHOWA=false,SNAME="";
+let SESSION=null,SIDX=0,SHOWA=false,SNAME="",NOTEQ="";
 function startReview(kind){
   let pool;
   if(kind==="weak")pool=dueCards().filter(c=>c.weak),SNAME="Weak spots";
@@ -392,18 +412,70 @@ function renderTopics(){
 function tgTopic(k){S.topics[k]=S.topics[k]||{};S.topics[k].done=!S.topics[k].done;save();render()}
 function conf(k,n){S.topics[k]=S.topics[k]||{};S.topics[k].conf=n;save();render()}
 
-/* ===== NOTES ===== */
+/* ===== NOTES (reader: collapsible, searchable, tables, weak highlight) ===== */
+function notesModules(){return MODULES.filter(m=>(m.notes&&m.notes.length)||m.summary||(m.flags&&m.flags.length))}
+function curNoteId(){const ms=notesModules();return (S.noteMod&&ms.find(m=>m.id===S.noteMod))?S.noteMod:(ms[0]||{}).id}
+function sectionsFor(m){ if(m.notes&&m.notes.length) return m.notes;
+  if(m.summary) return [{h:"Summary",body:m.summary}]; return []; }
 function renderNotes(){
   const v=document.getElementById("view");
-  const ms=MODULES.filter(m=>m.summary||m.flags?.length);
-  if(!ms.length){v.innerHTML=`<h1>Notes</h1><div class="card empty">No summary notes yet.</div>`;return}
-  const cur=S.noteMod&&ms.find(m=>m.id===S.noteMod)?S.noteMod:ms[0].id;
-  const m=ms.find(x=>x.id===cur);
-  v.innerHTML=`<h1>Summary notes</h1>
-    <select onchange="S.noteMod=this.value;save();render()">${ms.map(x=>`<option value="${x.id}" ${x.id===cur?'selected':''}>${x.title}</option>`).join("")}</select>
-    ${m.flags&&m.flags.length?`<div class="flag"><b>⚠ Possible issues to check</b> — your notes are shown verbatim; these are flags only, nothing was changed:
+  const ms=notesModules();
+  if(!ms.length){v.innerHTML=`<h1>Notes</h1><div class="card empty">No notes yet.</div>`;return}
+  const cur=curNoteId(), m=ms.find(x=>x.id===cur);
+  v.innerHTML=`<h1>Notes</h1>
+    <select onchange="S.noteMod=this.value;save();NOTEQ='';render()">${ms.map(x=>`<option value="${x.id}" ${x.id===cur?'selected':''}>${esc(x.title)}</option>`).join("")}</select>
+    <div class="row" style="margin-top:10px">
+      <input class="search" placeholder="Search ${esc(m.title)} notes…" value="${esc(NOTEQ)}" oninput="NOTEQ=this.value;paintNotes()">
+      ${m.pdf?`<a class="btn ghost pdfbtn" href="sources/${encodeURIComponent(m.pdf)}" target="_blank" rel="noopener">PDF</a>`:''}
+    </div>
+    ${m.flags&&m.flags.length?`<div class="flag"><b>⚠ Possible issues to check</b> — shown verbatim, nothing changed:
       <ul style="margin:8px 0 0;padding-left:18px">${m.flags.map(f=>`<li>${md(f)}</li>`).join("")}</ul></div>`:''}
-    <div class="card note">${m.summary?md(m.summary):'<span class="dim">No summary for this module.</span>'}</div>`;
+    <div id="noteBody" style="margin-top:4px"></div>`;
+  paintNotes();
+}
+function paintNotes(){
+  const ms=notesModules(), m=ms.find(x=>x.id===curNoteId());
+  const box=document.getElementById("noteBody"); if(!box)return;
+  const secs=sectionsFor(m||{}), q=(NOTEQ||"").trim().toLowerCase();
+  let shown=0, html="";
+  secs.forEach(s=>{
+    if(q && !((s.h+" "+s.body).toLowerCase().includes(q))) return;
+    shown++;
+    html+=`<details class="sec" ${q?"open":""}><summary>${esc(s.h)}</summary>
+      <div class="secbody">${renderNoteBody(s.body)}</div></details>`;
+  });
+  if(!secs.length) html=`<div class="empty">No notes for this module yet.</div>`;
+  else if(q && !shown) html=`<div class="empty">No matches for “${esc(q)}”.</div>`;
+  box.innerHTML=html;
+  if(q) hlNodes(box,q);
+}
+function renderNoteBody(body){
+  const lines=(body||"").split("\n"); let html="", i=0;
+  while(i<lines.length){
+    const t=lines[i].trim();
+    if(t.startsWith("|")){ const tbl=[]; while(i<lines.length&&lines[i].trim().startsWith("|")){tbl.push(lines[i].trim());i++;} html+=renderTable(tbl); continue; }
+    if(t.startsWith("- ")){ html+="<ul>"; while(i<lines.length&&lines[i].trim().startsWith("- ")){html+="<li>"+inl(lines[i].trim().slice(2))+"</li>";i++;} html+="</ul>"; continue; }
+    if(t) html+="<p>"+inl(t)+"</p>";
+    i++;
+  }
+  return html;
+}
+function renderTable(rows){
+  let r=rows.map(x=>x.replace(/^\|/,"").replace(/\|$/,"").split("|").map(c=>c.trim()));
+  if(!r.length)return"";
+  let head=r[0], body=r.slice(1);
+  if(body[0]&&body[0].every(c=>/^:?-{2,}:?$/.test(c))) body=body.slice(1);
+  return `<table><thead><tr>${head.map(c=>"<th>"+inl(c)+"</th>").join("")}</tr></thead><tbody>${
+    body.map(row=>"<tr>"+row.map(c=>"<td>"+inl(c)+"</td>").join("")+"</tr>").join("")}</tbody></table>`;
+}
+function inl(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<span class="hl">$1</span>')}
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function hlNodes(root,q){
+  const rx=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi");
+  const nodes=[],w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  while(w.nextNode())nodes.push(w.currentNode);
+  nodes.forEach(n=>{ if(!rx.test(n.nodeValue))return; rx.lastIndex=0;
+    const sp=document.createElement("span"); sp.innerHTML=esc(n.nodeValue).replace(rx,"<mark>$1</mark>"); n.replaceWith(sp); });
 }
 
 /* ===== PROGRESS ===== */
