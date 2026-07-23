@@ -301,13 +301,15 @@ function qbankPlan(){
   return {total,done,remaining,perDay,solvedToday,daysLeft};
 }
 function logQuestions(){
-  const v=prompt("How many questions did you solve today?");
+  const t=todayStr(), cur=S.qbank.log[t]||0;
+  const v=prompt("Questions solved today (edit anytime):",cur);
   if(v===null)return; const n=parseInt(v,10);
   if(isNaN(n)||n<0){toast("Enter a valid number.");return;}
-  const t=todayStr(); S.qbank.log[t]=(S.qbank.log[t]||0)+n;
-  S.qbank.done=Math.min((S.qbank.done||0)+n,S.qbank.total); save();
+  const delta=n-cur;                                   // replace today's value, adjust the running total
+  S.qbank.log[t]=n; if(n===0) delete S.qbank.log[t];
+  S.qbank.done=Math.max(0,Math.min((S.qbank.done||0)+delta,S.qbank.total)); save();
   const p=qbankPlan();
-  toast(p.solvedToday>=p.perDay?"Today's target hit 🎯":`Logged ${n} · ${Math.max(0,p.perDay-p.solvedToday)} more today`);
+  toast(p.perDay&&p.solvedToday>=p.perDay?"Today's target hit 🎯":`Today: ${n} logged`);
   render();
 }
 function editQbank(){
@@ -390,7 +392,7 @@ function renderToday(){
           <b style="font-size:16px">${qb.perDay?`${qb.perDay} questions today`:'Qbank complete 🎉'}</b>
           <div class="muted" style="font-size:13px;margin-top:3px">${qb.solvedToday} solved today · ${fmt(qb.done)}/${fmt(qb.total)} attempted</div>
         </div>
-        ${qb.perDay?`<button class="btn ${qb.solvedToday>=qb.perDay?'good':'primary'}" style="flex:0 0 auto;padding:11px 18px" onclick="logQuestions()">Log</button>`:`<span class="pill good">✓</span>`}
+        <button class="btn ${qb.perDay&&qb.solvedToday>=qb.perDay?'good':'primary'}" style="flex:0 0 auto;padding:11px 18px" onclick="logQuestions()">${qb.solvedToday>0?'Edit':'Log'}</button>
       </div>
       <div class="bar" style="margin-top:14px"><i style="width:${qb.total?Math.round(qb.done/qb.total*100):0}%"></i></div>
       <div class="row between" style="margin-top:10px">
