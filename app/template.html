@@ -320,6 +320,34 @@ function editQbank(){
   S.qbank.total=t; S.qbank.done=Math.min(a,t); save(); render();
 }
 
+/* ===== EXAM READINESS (composite signal + final-fortnight taper) ===== */
+const TARGET_ACC=65, PASS_MARK=60, TAPER_DAYS=14;
+function clamp100(x){return Math.max(0,Math.min(100,x))}
+function readinessPlan(){
+  const q=S.qbank, nt=notesToday(), qbp=qbankPlan();
+  const acc=(q.accuracy==null||q.accuracy==="")?null:+q.accuracy;
+  const mock=(S.mock==null||S.mock==="")?null:+S.mock;
+  const comps=[];
+  if(acc!=null) comps.push({k:"Qbank accuracy",v:clamp100(acc/TARGET_ACC*100),w:40});
+  if(mock!=null) comps.push({k:"Mock score",v:clamp100(mock/PASS_MARK*100),w:20});
+  comps.push({k:"Notes coverage",v:pct(nt.covered,nt.total),w:15});
+  comps.push({k:"Weak spots fixed",v:pct(WEAKCARDS.filter(isMastered).length,WEAKCARDS.length),w:15});
+  comps.push({k:"Qbank progress",v:pct(qbp.done,qbp.total),w:10});
+  const wsum=comps.reduce((a,c)=>a+c.w,0)||1;
+  const score=Math.round(comps.reduce((a,c)=>a+c.v*c.w,0)/wsum);
+  const weakest=comps.slice().sort((a,b)=>a.v-b.v)[0];
+  const daysLeft=daysToExam(), taper=daysLeft<=TAPER_DAYS;
+  const label=score>=75?"Strong":score>=55?"On track":score>=35?"Building":"Early days";
+  return {score,label,weakest,comps,taper,daysLeft,hasInputs:acc!=null||mock!=null};
+}
+function editReadiness(){
+  const a=prompt("Your PassMedicine average % correct (blank to skip):", S.qbank.accuracy??"");
+  if(a!==null){ if(a===""){S.qbank.accuracy=null} else {const n=parseInt(a,10); if(!isNaN(n)&&n>=0&&n<=100)S.qbank.accuracy=n;} }
+  const m=prompt("Your latest mock exam % (blank to skip):", S.mock??"");
+  if(m!==null){ if(m===""){S.mock=null} else {const n=parseInt(m,10); if(!isNaN(n)&&n>=0&&n<=100)S.mock=n;} }
+  save(); render();
+}
+
 /* ===== ROUTER ===== */
 let TAB="today";
 const TABS=[
@@ -351,8 +379,11 @@ function ringSvg(pct,color,stroke=11){
 
 /* ===== TODAY ===== */
 function renderToday(){
-  const {items,plan:p}=todaysGoalItems();
-  const gp=goalPct();
+  const rp=readinessPlan();
+  const rc=rp.score>=75?'var(--good)':rp.score>=55?'var(--blue)':rp.score>=35?'var(--warn)':'var(--weak)';
+  let {items,plan:p}=todaysGoalItems();
+  if(rp.taper) items=items.filter(i=>i.key!=='learn');
+  const gp=items.length?Math.round(items.filter(i=>i.done).length/items.length*100):100;
   const nt=notesToday();
   const qb=qbankPlan();
   const v=document.getElementById("view");
@@ -362,13 +393,24 @@ function renderToday(){
       <div><h1>Today</h1><p class="muted" style="margin:0">${niceDate()}</p></div>
       <span class="pill blue">${p.dLeft} days left</span>
     </div>
+    <div class="card row between" onclick="editReadiness()" style="cursor:pointer;padding:16px 18px">
+      <div style="flex:1">
+        <b style="font-size:16px">Exam readiness</b>
+        <div class="muted" style="font-size:13px;margin-top:3px">${rp.label} · focus: ${rp.weakest.k}${rp.hasInputs?'':' · tap to add your Qbank %'}</div>
+        ${rp.taper?`<div class="pill weak" style="margin-top:8px;display:inline-block">Final ${rp.daysLeft} days — review + mocks, no new topics</div>`:''}
+      </div>
+      <div style="text-align:right;margin-left:12px">
+        <b style="font-size:32px;letter-spacing:-.02em;color:${rc}">${rp.score}</b>
+        <div class="dim" style="font-size:11px">/ 100</div>
+      </div>
+    </div>
     <div class="card" style="display:flex;gap:18px;align-items:center">
       <div class="ring">${ringSvg(gp,"var(--blue)")}
         <div class="cx"><b>${gp}%</b><span>Goal</span></div></div>
       <div style="flex:1">
         <b style="font-size:16px">${gp===100?"Day complete 🎉":"Goal of the day"}</b>
         <p class="muted" style="margin:6px 0 0;font-size:14px">
-          ${gp===100?"You've cleared everything for today.":"Finish these three to stay on track for 23 Sep."}</p>
+          ${gp===100?"You've cleared everything for today.":(rp.taper?"Final stretch — consolidate weak spots and reviews.":"Finish today's goal to stay on track for 23 Sep.")}</p>
         ${p.behind>0?`<div class="pill weak" style="margin-top:10px;display:inline-block">${p.behind} module${p.behind>1?'s':''} behind pace</div>`
           :`<div class="pill good" style="margin-top:10px;display:inline-block">On track</div>`}
       </div>
@@ -597,7 +639,16 @@ function renderStats(){
   const topDone=Object.values(S.topics).filter(t=>t.done).length;
   const nt=notesToday();
   const qb=qbankPlan();
+  const rp=readinessPlan();
+  const rc=rp.score>=75?'var(--good)':rp.score>=55?'var(--blue)':rp.score>=35?'var(--warn)':'var(--weak)';
   v.innerHTML=`<h1>Progress</h1>
+    <div class="card" onclick="editReadiness()" style="cursor:pointer">
+      <div class="row between"><b style="font-size:17px">Exam readiness · <span style="color:${rc}">${rp.score}/100</span></b>
+        <span class="pill ${rp.taper?'weak':'blue'}">${rp.taper?'taper':rp.label}</span></div>
+      ${rp.comps.map(c=>`<div style="margin-top:11px"><div class="row between"><span class="dim" style="font-size:13px">${c.k}</span><span class="dim" style="font-size:13px">${Math.round(c.v)}%</span></div>
+        <div class="bar" style="margin-top:5px"><i style="width:${Math.round(c.v)}%;background:${c.v>=65?'var(--good)':c.v>=40?'var(--warn)':'var(--weak)'}"></i></div></div>`).join("")}
+      <div class="dim" style="font-size:12px;margin-top:13px">${rp.hasInputs?'Tap to update your PassMedicine average % / latest mock %':'Tap to add your PassMedicine average % and latest mock % for a sharper score'}</div>
+    </div>
     <div class="grid">
       <div class="stat"><b>${daysToExam()}</b><span>Days to exam</span></div>
       <div class="stat"><b style="color:var(--good)">${pct(qb.done,qb.total)}%</b><span>Qbank done</span></div>
